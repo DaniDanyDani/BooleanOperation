@@ -16,9 +16,38 @@ from vtkmodules.vtkIOGeometry import (
     vtkOBJReader,
     vtkSTLReader
 )
+
+from vtkmodules.vtkFiltersGeneral import vtkTransformPolyDataFilter
+
 from vtkmodules.vtkIOLegacy import vtkPolyDataReader
 from vtkmodules.vtkIOPLY import vtkPLYReader
 from vtkmodules.vtkIOXML import vtkXMLPolyDataReader
+from vtkmodules.vtkRenderingCore import (
+    vtkActor,
+    vtkPolyDataMapper,
+    vtkRenderWindow,
+    vtkRenderWindowInteractor,
+    vtkRenderer
+)
+
+from vtkmodules.vtkCommonTransforms import vtkTransform
+from vtkmodules.vtkFiltersSources import vtkSphereSource
+from vtkmodules.vtkRenderingCore import vtkActor, vtkPolyDataMapper
+
+from vtkmodules.vtkIOLegacy import vtkPolyDataWriter
+
+#!/usr/bin/env python
+
+# noinspection PyUnresolvedReferences
+import vtkmodules.vtkInteractionStyle
+# noinspection PyUnresolvedReferences
+import vtkmodules.vtkRenderingOpenGL2
+from vtkmodules.vtkCommonColor import vtkNamedColors
+from vtkmodules.vtkFiltersSources import vtkSphereSource
+from vtkmodules.vtkIOGeometry import (
+    vtkSTLReader,
+    vtkSTLWriter
+)
 from vtkmodules.vtkRenderingCore import (
     vtkActor,
     vtkPolyDataMapper,
@@ -66,6 +95,29 @@ def main():
         clean2.SetInputConnection(tri2.GetOutputPort())
         clean2.Update()
         input2 = clean2.GetOutput()
+
+        bounds = input2.GetBounds()
+        center = [
+            (bounds[0] + bounds[1]) / 2,  # (xmin + xmax) / 2
+            (bounds[2] + bounds[3]) / 2,  # (ymin + ymax) / 2
+            (bounds[4] + bounds[5]) / 2   # (zmin + zmax) / 2
+        ]
+
+        transform = vtkTransform()
+
+        transform.Translate(center)
+        transform.Scale(1.1, 1.1, 1.1)
+        transform.Translate(-center[0], -center[1], -center[2])
+
+        # Adicionar o filtro de transformação
+        transformFilter = vtkTransformPolyDataFilter()
+        transformFilter.SetTransform(transform)  # Define a transformação
+        transformFilter.SetInputData(input2)     # Aplica à entrada 2 (input2)
+        transformFilter.Update()                  # Atualiza a transformação
+        transformedInput2 = transformFilter.GetOutput()  # Obtém a saída transformada
+
+        
+
     else:
         sphereSource1 = vtkSphereSource()
         sphereSource1.SetCenter(0.25, 0, 0)
@@ -89,7 +141,7 @@ def main():
     input1Actor.SetPosition(input1.GetBounds()[1] - input1.GetBounds()[0], 0, 0)
 
     input2Mapper = vtkPolyDataMapper()
-    input2Mapper.SetInputData(input2)
+    input2Mapper.SetInputData(transformedInput2)  # Usar o modelo transformado (transformedInput2)
     input2Mapper.ScalarVisibilityOff()
     input2Actor = vtkActor()
     input2Actor.SetMapper(input2Mapper)
@@ -110,7 +162,7 @@ def main():
         return
 
     booleanOperation.SetInputData(0, input1)
-    booleanOperation.SetInputData(1, input2)
+    booleanOperation.SetInputData(1, transformedInput2)
 
     booleanOperationMapper = vtkPolyDataMapper()
     booleanOperationMapper.SetInputConnection(booleanOperation.GetOutputPort())
@@ -141,6 +193,7 @@ def main():
     renWinInteractor = vtkRenderWindowInteractor()
     renWinInteractor.SetRenderWindow(renderWindow)
 
+    WriteStl(booleanOperation, "resultado_booleano.stl")
     renderWindow.Render()
     renWinInteractor.Start()
 
@@ -183,6 +236,13 @@ def ReadPolyData(file_name):
         # Return a None if the extension is unknown.
         poly_data = None
     return poly_data
+
+def WriteStl(output_data, filename):
+    Stlwriter = vtkSTLWriter()
+    Stlwriter.SetFileName(filename)
+    Stlwriter.SetInputConnection(output_data.GetOutputPort())
+    Stlwriter.Write()
+    print(f"Resultado salvo em {filename}")
 
 
 def PositionCamera(renderer, viewUp, position):
