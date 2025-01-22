@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+import os
 # noinspection PyUnresolvedReferences
 import vtkmodules.vtkInteractionStyle
 # noinspection PyUnresolvedReferences
@@ -96,7 +96,7 @@ def main():
         clean2.Update()
         input2 = clean2.GetOutput()
 
-        bounds = input2.GetBounds()
+        bounds = input1.GetBounds()
         center = [
             (bounds[0] + bounds[1]) / 2,  # (xmin + xmax) / 2
             (bounds[2] + bounds[3]) / 2,  # (ymin + ymax) / 2
@@ -106,15 +106,15 @@ def main():
         transform = vtkTransform()
 
         transform.Translate(center)
-        transform.Scale(1.1, 1.1, 1.1)
+        transform.Scale(1, 1, 1)
         transform.Translate(-center[0], -center[1], -center[2])
 
         # Adicionar o filtro de transformação
         transformFilter = vtkTransformPolyDataFilter()
         transformFilter.SetTransform(transform)  # Define a transformação
-        transformFilter.SetInputData(input2)     # Aplica à entrada 2 (input2)
+        transformFilter.SetInputData(input1)     # Aplica à entrada 2 (input1)
         transformFilter.Update()                  # Atualiza a transformação
-        transformedInput2 = transformFilter.GetOutput()  # Obtém a saída transformada
+        transformedinput1 = transformFilter.GetOutput()  # Obtém a saída transformada
 
         
 
@@ -141,7 +141,7 @@ def main():
     input1Actor.SetPosition(input1.GetBounds()[1] - input1.GetBounds()[0], 0, 0)
 
     input2Mapper = vtkPolyDataMapper()
-    input2Mapper.SetInputData(transformedInput2)  # Usar o modelo transformado (transformedInput2)
+    input2Mapper.SetInputData(input2)
     input2Mapper.ScalarVisibilityOff()
     input2Actor = vtkActor()
     input2Actor.SetMapper(input2Mapper)
@@ -161,8 +161,8 @@ def main():
         print('Unknown operation:', operation)
         return
 
-    booleanOperation.SetInputData(0, input1)
-    booleanOperation.SetInputData(1, transformedInput2)
+    booleanOperation.SetInputData(0, transformedinput1)
+    booleanOperation.SetInputData(1, input2)
 
     booleanOperationMapper = vtkPolyDataMapper()
     booleanOperationMapper.SetInputConnection(booleanOperation.GetOutputPort())
@@ -192,11 +192,27 @@ def main():
 
     renWinInteractor = vtkRenderWindowInteractor()
     renWinInteractor.SetRenderWindow(renderWindow)
-
+    
+    booleanOperation.Update()
     WriteStl(booleanOperation, "resultado_booleano.stl")
+
+    inverseTransform = vtkTransform()
+    inverseTransform.DeepCopy(transform)  
+    inverseTransform.Inverse()  
+
+    inverseTransformFilter = vtkTransformPolyDataFilter()
+    inverseTransformFilter.SetTransform(inverseTransform)
+    inverseTransformFilter.SetInputConnection(booleanOperation.GetOutputPort())
+    inverseTransformFilter.Update()
+
     renderWindow.Render()
     renWinInteractor.Start()
 
+
+
+    # WriteVtk(inverseTransformFilter, "resultado_booleano_invertido.vtk")
+    WriteStl(inverseTransformFilter, "Patient_1_scar.stl")
+    print("Transformação inversa aplicada e resultado salvo.")
 
 def ReadPolyData(file_name):
     import os
@@ -243,6 +259,17 @@ def WriteStl(output_data, filename):
     Stlwriter.SetInputConnection(output_data.GetOutputPort())
     Stlwriter.Write()
     print(f"Resultado salvo em {filename}")
+
+# def WriteVtk(output_data, filename):
+    
+#     vtk_writer = vtkPolyDataWriter()
+#     vtk_writer.SetInputConnection(output_data.GetOutputPort())
+#     vtk_writer.SetFileName(filename)
+#     vtk_writer.Write()
+
+#     print(f"Resultado booleano invertido salvo em {filename}")
+
+
 
 
 def PositionCamera(renderer, viewUp, position):
