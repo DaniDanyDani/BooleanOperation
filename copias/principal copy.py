@@ -156,11 +156,11 @@ def bool_operation(scar, heart, operation="Difference"):
 
     booleanOperation = vtkBooleanOperationPolyDataFilter()
 
-    if operation == "Difference":
+    if operation.lower() == "difference":
         booleanOperation.SetOperationToDifference()
-    elif operation == "Intersection":
+    elif operation == "intersection":
         booleanOperation.SetOperationToIntersection()
-    elif operation == "Union":
+    elif operation == "union":
         booleanOperation.SetOperationToUnion()
     else:
         raise ValueError(f"Operação booleana desconhecida: {operation}")
@@ -316,7 +316,7 @@ if intersection(scar_poly, heart_poly):
                 scar_poly = region
                 scar_poly_transformed, transform = scalar_transform(scar_poly,center_scar, sup_scale)
                 visualizer(scar_poly_transformed, heart_poly, f"Entrada {n_superficie} transformada inicial")
-                pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly)
+                pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly, "Intersection")
                 visualizer(pre_scar_bool, heart_poly, f"Entrada {n_superficie} booleano inicial")
                 pre_scar_bool = invert_transform(transform, pre_scar_bool)
                 visualizer(pre_scar_bool, heart_poly, f"Entrada {n_superficie} booleano inicial invertido")

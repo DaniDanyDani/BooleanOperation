@@ -280,6 +280,21 @@ def visualizer(scar_poly, hear_poly, name):
     renWindow.Render()
     iren.Start()
 
+# def smoothPoly(poly,num_iter = 15,rlx_factor=0.1):
+#     '''
+#     http://www.vtk.org/doc/nightly/html/classvtkSmoothPolyDataFilter.html
+#     '''
+#     smoothFilter = vtk.vtkSmoothPolyDataFilter()
+#     smoothFilter.SetInputData(poly)
+#     smoothFilter.SetNumberOfIterations(num_iter)
+#     smoothFilter.SetRelaxationFactor(rlx_factor)
+#     smoothFilter.FeatureEdgeSmoothingOff()
+#     #smoothFilter.FeatureEdgeSmoothingOn()
+#     smoothFilter.BoundarySmoothingOff()
+#     #smoothFilter.BoundarySmoothingOff()
+#     smoothFilter.Update()
+#     return smoothFilter.GetOutput()
+
 
 fn1, fn2 = get_program_parameters()
 file_name = f"{os.path.splitext(fn1)[0]}_processed.stl"
@@ -351,7 +366,7 @@ if intersection(scar_poly, heart_poly):
                 visualizer(scar_poly_transformed, scar_poly, f"Entrada {n_superficie} comparada com base")
                 
 
-                pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly)
+                pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly, "Intersection")
 
                 visualizer(pre_scar_bool, heart_poly, f"Entrada {n_superficie} após o booleano")
 
@@ -363,13 +378,15 @@ if intersection(scar_poly, heart_poly):
                     print(f"Encontrada intersecção na {n_superficie}° superficie, aplicando escala inferior")
                     scar_poly_transformed, transform = scalar_transform(pre_scar_bool, center_scar, inf_scale)
                     visualizer(scar_poly_transformed, heart_poly, f"Entrada {n_superficie} transformada final")
-                    scar_processed = bool_operation(pre_scar_bool, heart_poly)
+                    scar_processed = bool_operation(pre_scar_bool, heart_poly, "Intersection")
                     visualizer(scar_poly_transformed, heart_poly, f"Entrada {n_superficie} booleano final")
                     scar_processed = invert_transform(transform, pre_scar_bool)
                     visualizer(scar_poly_transformed, heart_poly, f"Entrada {n_superficie} booleano final invertido")
                     print(f"Salvando a regiao {n_superficie} em scar_processed")
                 else:
                     print(f"Salvando a regiao {n_superficie} em scar_processed")
+                    # pre_scar_bool = bool_operation(pre_scar_bool, region, "Intersection")
+                    # visualizer(pre_scar_bool, pre_scar_bool, f"Entrada {n_superficie} final")
                     scar_processed = pre_scar_bool
                     visualizer(scar_processed, heart_poly, f"Entrada {n_superficie} final")
             else:
@@ -392,7 +409,8 @@ if intersection(scar_poly, heart_poly):
         if isinstance(scar_processed, vtk.vtkUnstructuredGrid):
             scar_processed = convert_to_polydata(scar_processed)
 
-        # scar_processed = clean_and_triangulate(scar_processed)
+        scar_processed, center = clean_and_triangulate(scar_processed)
+        # scar_processed = smoothPoly(scar_processed)
         WriteStl(scar_processed, file_name)
         WriteVtk(scar_processed, file_name_vtk)    
     else:
@@ -400,7 +418,7 @@ if intersection(scar_poly, heart_poly):
         scar_poly_transformed, transform = scalar_transform(scar_poly, center_scar, sup_scale)
         visualizer(scar_poly_transformed, heart_poly, f"Entrada inicial transformada")
 
-        pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly)
+        pre_scar_bool = bool_operation(scar_poly_transformed, heart_poly, "Intersection")
         visualizer(pre_scar_bool, heart_poly, f"Entrada inicial booleana")
         pre_scar_bool = invert_transform(transform, pre_scar_bool)
         visualizer(pre_scar_bool, heart_poly, f"Entrada inicial invertida")
@@ -409,7 +427,7 @@ if intersection(scar_poly, heart_poly):
             print(f"Encontrada intersecção na fibrose... aplicando escala inferior")
             scar_poly_transformed, transform = scalar_transform(scar_poly, center_scar, inf_scale)
             visualizer(scar_poly_transformed, heart_poly, f"Entrada final transformada")
-            scar_processed = bool_operation(pre_scar_bool, heart_poly)
+            scar_processed = bool_operation(pre_scar_bool, heart_poly, "Intersection")
             visualizer(scar_processed, heart_poly, f"Entrada final booleano")
             scar_processed = invert_transform(transform, scar_processed)
             visualizer(scar_processed, heart_poly, f"Entrada final booleano")
@@ -425,7 +443,8 @@ if intersection(scar_poly, heart_poly):
         if isinstance(scar_processed, vtk.vtkUnstructuredGrid):
             scar_processed = convert_to_polydata(scar_processed)
 
-        # scar_processed = clean_and_triangulate(scar_processed)
+        scar_processed, center = clean_and_triangulate(scar_processed)
+        # scar_processed = smoothPoly(scar_processed)
         WriteStl(scar_processed, file_name)
         WriteVtk(scar_processed, file_name_vtk)     
 else:
@@ -435,7 +454,8 @@ else:
     visualizer(scar_processed, heart_poly, f"final")
 
     # if isinstance(scar_processed, vtk.vtkUnstructuredGrid):
-    #     scar_processed = convert_to_polydata(scar_processed)
-
+        # scar_processed = convert_to_polydata(scar_processed)
+    # scar_processed = smoothPoly(scar_processed)
+    scar_processed, center = clean_and_triangulate(scar_processed)
     WriteStl(scar_processed, file_name)
     WriteVtk(scar_processed, file_name_vtk)
